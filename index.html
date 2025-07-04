@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timezone</title>
+    <meta name="description" content="A simple page to display the current timezone using JavaScript.">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+</head>
+
+<body>
+
+    <div class="container">
+        <h1 class="mt-5">Timezone</h1>
+        <p class="lead">This is a simple page to display the current timezone.</p>
+        <div class="alert alert-info" role="alert">
+            Your current timezone is: <span id="timezone"></span>
+            Your current time is: <span id="time"></span>
+        </div>
+
+        <select id="timezone-dropdown">
+            <option value="">Select a timezone</option>
+        </select>
+
+        <div class="alert alert-success mt-3 d-none" id="loading-box" role="alert">
+            please wait loading...
+        </div>
+        <div class="alert alert-danger mt-3 d-none" id="error-box" role="alert">
+
+        </div>
+
+    </div>
+
+    <script>
+        jQuery(function () {
+            // Ensure the DOM is fully loaded before running the script
+            'use strict';
+            URL = 'https://worldtimeapi.org/api/timezone';
+
+            function showLoading() {
+                $('#loading-box').removeClass('d-none');
+            }
+            function hideLoading() {
+                $('#loading-box').addClass('d-none');
+            }
+            function showError(message) {
+                $('#error-box').removeClass('d-none');
+                $('#error-box').html(message);
+            }
+            function hideError() {
+                $('#error-box').addClass('d-none');
+            }
+
+            function fetchAllTimeZone() {
+                showLoading();
+                $('#timezone-dropdown').empty(); // Clear existing options
+                $('#timezone-dropdown').append(
+                    $('<option>', { value: '', text: 'Select a timezone' })
+                );
+
+                $.ajax({
+                    url: URL
+                    ,
+                    type: "GET",
+                    success: function (data) {
+                        // data is an array of timezone strings
+                        $.each(data, function (index, timezone) {
+                            $('#timezone-dropdown').append(
+                                $('<option>', { value: timezone, text: timezone })
+                            );
+                        });
+                        hideLoading();
+                        hideError();
+                        displayTimezone(); // Display the current timezone
+                        $('#timezone-dropdown').val(getTimezone()); // Set the dropdown to the current timezone
+                        $('#timezone-dropdown').trigger('change'); // Trigger change event to display the current time
+                    },
+                    error: function (xhr, status, error) {
+                        showError('Error fetching timezones: ' + error + '. Please try again <a href="javascript:location.reload()">reload</a> the page.');
+                        hideLoading();
+                    }
+                });
+            }
+
+            // Event listener for timezone selection
+            $('#timezone-dropdown').on('change', function () {
+                const selectedTimezone = $(this).val();
+                if (selectedTimezone) {
+                    // Fetch and display the current time in the selected timezone
+                    showLoading();
+                    hideError();
+                    $('#time').text(''); // Clear previous time display
+                    $('#timezone').text(selectedTimezone); // Update the displayed timezone
+                    $.ajax({
+                        url: URL + `/${selectedTimezone}`,
+                        type: "GET",
+                        success: function (data) {
+                            const dateTime = new Date(data.datetime);
+                            const options = {
+                                timeZone: selectedTimezone,
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: false
+                            };
+                            const formattedTime = dateTime.toLocaleString('en-GB', options);
+                            $('#time').text(formattedTime);
+                            $('#timezone').text(selectedTimezone); // Update the displayed timezone
+                            hideLoading();
+                        },
+                        error: function (xhr, status, error) {
+                            hideLoading();
+                            $('#time').text(''); // Clear the time display on error
+                            $('#timezone').text(selectedTimezone); // Update the displayed timezone
+                            showError('Error fetching time for selected timezone: ' + error);
+                        }
+                    });
+                } else {
+                    $('#time').text(''); // Clear the time display if no timezone is selected
+                    $('#timezone').text(''); // Clear the displayed timezone
+                }
+            });
+
+            fetchAllTimeZone();
+            // Display the current timezone
+
+            function getTimezone() {
+                return Intl.DateTimeFormat().resolvedOptions().timeZone;
+            }
+            function displayTimezone() {
+                const timezone = getTimezone();
+                $('#timezone').text(timezone);
+            }
+
+        });
+    </script>
+</body>
+
+</html>
